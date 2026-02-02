@@ -1,7 +1,7 @@
 """
-FLUX.2-klein-4b-fp8 RunPod Serverless Handler (SFW Only)
+FLUX.2-klein-4B RunPod Serverless Handler (SFW Only)
 
-Loads FLUX.2-klein FP8 quantized model (40% VRAM reduction, 1.6x faster)
+Loads FLUX.2-klein-4B model (~13GB VRAM, 4-step generation)
 at container start, then handles inference requests returning base64-encoded images.
 """
 
@@ -12,7 +12,7 @@ import sys
 import traceback
 
 print("=" * 60)
-print("FLUX.2-klein-4b-fp8 Handler Starting...")
+print("FLUX.2-klein-4B Handler Starting...")
 print("=" * 60)
 print(f"Python version: {sys.version}")
 print(f"Working directory: {os.getcwd()}")
@@ -50,7 +50,7 @@ except Exception as e:
     sys.exit(1)
 
 # Model paths (set during Docker build)
-MODEL_PATH = os.environ.get("MODEL_PATH", "black-forest-labs/FLUX.2-klein-4b-fp8")
+MODEL_PATH = os.environ.get("MODEL_PATH", "black-forest-labs/FLUX.2-klein-4B")
 HF_CACHE = os.environ.get("HF_HOME", "/models/hf_cache")
 
 print(f"Model: {MODEL_PATH}")
@@ -77,16 +77,15 @@ LIMITS = {
 
 
 def load_pipeline():
-    """Load the FLUX.2-klein FP8 pipeline."""
-    print("Loading FLUX.2-klein-4b-fp8 pipeline...")
+    """Load the FLUX.2-klein-4B pipeline."""
+    print("Loading FLUX.2-klein-4B pipeline...")
 
     # Clear any existing CUDA memory
     torch.cuda.empty_cache()
     if torch.cuda.is_available():
         torch.cuda.reset_peak_memory_stats()
 
-    # Load the FLUX.2-klein FP8 pipeline
-    # FP8 models are automatically quantized, we just specify the dtype for computation
+    # Load the FLUX.2-klein-4B pipeline
     pipe = Flux2KleinPipeline.from_pretrained(
         MODEL_PATH,
         torch_dtype=torch.bfloat16,
@@ -205,7 +204,7 @@ def handler(job):
         signal.alarm(30)  # 30 second timeout
 
         with torch.inference_mode():
-            # FLUX.2-klein FP8 with CFG=1 (guidance_scale=1.0 for distilled models)
+            # FLUX.2-klein with CFG=1 (guidance_scale=1.0 for distilled models)
             result = pipe(
                 prompt=prompt,
                 height=height,
