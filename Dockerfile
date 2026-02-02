@@ -24,11 +24,19 @@ RUN pip install --no-cache-dir regex requests filelock numpy Pillow
 # Verify PyTorch version
 RUN python -c "import torch; v=torch.__version__; print(f'PyTorch: {v}'); major_minor = tuple(map(int, v.split('+')[0].split('.')[:2])); assert major_minor >= (2,5), f'Need PyTorch 2.5+, got {v}'"
 
-# Pre-download the model files (without loading - no GPU during build)
-RUN pip install --no-cache-dir huggingface_hub && \
-    python -c "from huggingface_hub import snapshot_download; \
-    snapshot_download('black-forest-labs/FLUX.2-klein-4B', \
-    cache_dir='/models/hf_cache')"
+# Pre-download the model files using the actual pipeline
+# This ensures all transformers/diffusers cache files are created correctly
+RUN mkdir -p /models/hf_cache && \
+    HF_HOME=/models/hf_cache TRANSFORMERS_CACHE=/models/hf_cache python -c "\
+from diffusers import Flux2KleinPipeline; \
+import torch; \
+print('Downloading FLUX.2-klein-4B...'); \
+pipe = Flux2KleinPipeline.from_pretrained( \
+    'black-forest-labs/FLUX.2-klein-4B', \
+    torch_dtype=torch.bfloat16, \
+    cache_dir='/models/hf_cache' \
+); \
+print('Model downloaded and cached successfully')"
 
 # Copy handler
 COPY handler.py .
